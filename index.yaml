@@ -1,0 +1,22 @@
+apiVersion: v1
+entries:
+  mailserver:
+  - apiVersion: v2
+    appVersion: 0.2.0
+    created: "2026-07-14T04:33:37.331370213Z"
+    description: Plain Postfix, Dovecot, Rspamd, OpenLDAP and Certbot mail stack for
+      Kubernetes
+    digest: 67897d56d89ddf28d494454dea107cff5942547b2a068c5c47648a7fd6af945b
+    keywords:
+    - postfix
+    - dovecot
+    - rspamd
+    - openldap
+    - certbot
+    - mail
+    name: mailserver
+    type: application
+    urls:
+    - https://tuna2134.github.io/mail-k8s/mailserver-0.2.0.tgz
+    version: 0.2.0
+generated: "2026-07-14T04:33:37.330554209Z"
