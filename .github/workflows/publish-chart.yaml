@@ -80,11 +80,6 @@ jobs:
           package_chart() {
             local source_dir=$1
 
-            # Published Charts default to images produced by this repository.
-            for component in postfix dovecot rspamd ldap; do
-              sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" "$source_dir/values.yaml"
-            done
-
             helm lint "$source_dir"
             helm package "$source_dir" --destination public
           }

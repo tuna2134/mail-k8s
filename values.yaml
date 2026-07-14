@@ -4,11 +4,11 @@ mail:
   postmaster: postmaster@example.com
   messageSizeLimit: 26214400
 images:
-  # Build the four local images from images/* and push them before installing.
-  postfix: { repository: registry.example.com/plain-postfix, tag: "0.2.0", pullPolicy: IfNotPresent }
-  dovecot: { repository: registry.example.com/plain-dovecot, tag: "0.2.0", pullPolicy: IfNotPresent }
-  rspamd: { repository: registry.example.com/plain-rspamd, tag: "0.2.0", pullPolicy: IfNotPresent }
-  ldap: { repository: registry.example.com/plain-ldap, tag: "0.2.0", pullPolicy: IfNotPresent }
+  # Project images are public on GHCR. Override these only for a fork or local build.
+  postfix: { repository: ghcr.io/tuna2134/mail-k8s-postfix, tag: "0.2.0", pullPolicy: IfNotPresent }
+  dovecot: { repository: ghcr.io/tuna2134/mail-k8s-dovecot, tag: "0.2.0", pullPolicy: IfNotPresent }
+  rspamd: { repository: ghcr.io/tuna2134/mail-k8s-rspamd, tag: "0.2.0", pullPolicy: IfNotPresent }
+  ldap: { repository: ghcr.io/tuna2134/mail-k8s-ldap, tag: "0.2.0", pullPolicy: IfNotPresent }
   certbot: { repository: certbot/certbot, tag: "v5.6.0", pullPolicy: IfNotPresent }
   haproxy: { repository: haproxy, tag: "3.2-alpine", pullPolicy: IfNotPresent }
 imagePullSecrets: []

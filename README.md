@@ -13,20 +13,33 @@
 固定グローバルIPv4、変更可能なPTR、受信/送信TCP 25、受信TCP 80/465/587/993、
 信頼できるクラスタDNS、StorageClassが必要です。HTTP Ingressは使用しません。
 
-## 1. イメージをビルド
+## 1. Helmリポジトリと設定ファイルを準備
 
 ```sh
-docker build -t ghcr.io/your-org/plain-postfix:0.2.0 images/postfix
-docker build -t ghcr.io/your-org/plain-dovecot:0.2.0 images/dovecot
-docker build -t ghcr.io/your-org/plain-rspamd:0.2.0 images/rspamd
-docker build -t ghcr.io/your-org/plain-ldap:0.2.0 images/ldap
-docker push ghcr.io/your-org/plain-postfix:0.2.0
-docker push ghcr.io/your-org/plain-dovecot:0.2.0
-docker push ghcr.io/your-org/plain-rspamd:0.2.0
-docker push ghcr.io/your-org/plain-ldap:0.2.0
+helm repo add mailserver https://tuna2134.dev/mail-k8s
+helm repo update
+helm search repo mailserver/mailserver --versions
+helm show values mailserver/mailserver > my-values.yaml
 ```
 
-`examples/production-values.yaml`のrepository、ドメイン、DN、固定IP、StorageClassを変更します。
+`https://tuna2134.dev/mail-k8s/`をブラウザで開くと404になりますが、静的なトップページを
+置いていないためです。Helmが利用する`index.yaml`とChart packageは同じURL以下で公開されて
+いるため、`helm repo add`には上記URLをそのまま指定します。
+
+Chartは次の公開イメージを既定で使用するため、通常のセットアップではイメージのbuildやpushは
+不要です。
+
+```text
+ghcr.io/tuna2134/mail-k8s-postfix
+ghcr.io/tuna2134/mail-k8s-dovecot
+ghcr.io/tuna2134/mail-k8s-rspamd
+ghcr.io/tuna2134/mail-k8s-ldap
+```
+
+`my-values.yaml`のドメイン、DN、固定IP、StorageClassを環境に合わせて変更します。この
+リポジトリをclone済みなら、より本番向けの容量例を含む`examples/production-values.yaml`を
+代わりにコピーできます。独自ビルドを使う場合だけ、`images.postfix.repository`などの
+repositoryとtagを`my-values.yaml`で上書きしてください。
 
 ## 2. LDAP資格情報
 
@@ -54,8 +67,9 @@ _dmarc.example.com.  3600 IN TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@examp
 IP提供者側でPTRを`mail.example.com`に設定します。
 
 ```sh
-helm lint . -f examples/production-values.yaml
-helm upgrade --install mailserver . -n mail -f examples/production-values.yaml
+helm upgrade --install mailserver mailserver/mailserver \
+  --namespace mail \
+  --values my-values.yaml
 kubectl -n mail logs deploy/mailserver-postfix -c obtain-certificate -f
 ```
 
@@ -153,15 +167,15 @@ git push origin v0.2.0
 タグとChart versionが一致しない場合、公開workflowは失敗します。公開後は次のように利用できます。
 
 ```sh
-helm repo add mailserver https://<owner>.github.io/<repository>
+helm repo add mailserver https://tuna2134.dev/mail-k8s
 helm repo update
 helm install mailserver mailserver/mailserver -n mail --create-namespace -f my-values.yaml
 ```
 
 Pages workflowはGitHub公式の`pages/static.yml`と同じ単一deploy job・Pages artifact方式です。
 書き込み可能な`gh-pages`ブランチは使用しません。実行のたびに全`v*`タグをcheckoutして
-過去を含む`.tgz`と`index.yaml`を再生成します。公開Chart内の4イメージrepositoryは、
-workflowが自動的に同じGitHubリポジトリのGHCRパスへ設定します。
+過去を含む`.tgz`と`index.yaml`を再生成します。Chartは`values.yaml`に記載した
+`ghcr.io/tuna2134/mail-k8s-*`の既定値を変更せずにpackageします。
 
 Actions画面の「Deploy Helm repository to Pages」から「Run workflow」を選ぶと、選択した
 ブランチのHEADもタグ済みChart群へ追加して即時デプロイします。未タグ版を手動公開する場合も、
