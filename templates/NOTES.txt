@@ -1,4 +1,4 @@
-1. Build and push images/postfix, images/dovecot, images/rspamd and images/ldap.
+1. The Chart defaults to the public ghcr.io/tuna2134/mail-k8s-* images.
 2. Ensure A and PTR records point {{ .Values.mail.hostname }} to the LoadBalancer IP.
 3. Ensure ports 80, 25, 465, 587 and 993 are reachable.
 4. Watch initial certificate issuance:

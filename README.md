@@ -91,14 +91,49 @@ NAMESPACE=mail RELEASE=mailserver ./scripts/ldap-user.sh
 ```
 
 作成されるユーザーDNは`uid=alice@example.com,ou=users,dc=example,dc=com`です。
-メールアドレス全体をIMAP/SMTPログイン名として使用します。削除や変更は`ldapmodify`、
-`ldapdelete`をLDAP Pod内で管理DNにbindして実施できます。
+メールアドレス全体をIMAP/SMTPログイン名として使用します。作成時の`Forward address`は任意で、
+空のままなら通常どおりローカルMaildirへ配送します。値を指定すると補助objectClass
+`mailForwardingUser`と`mail-forward`属性が追加され、Postfixがその宛先へ転送します。
+
+既存ユーザーに転送を追加する例です。`mail-forward`は複数値を持てるため、同じ属性行を追加すれば
+複数宛先へ転送できます。設定中はローカルMaildir配送を転送先への配送で置き換えます。
+
+```sh
+LDAP_POD=$(kubectl -n mail get pod -l app.kubernetes.io/component=ldap -o jsonpath='{.items[0].metadata.name}')
+kubectl -n mail exec -i "$LDAP_POD" -- bash -c \
+  'ldapmodify -x -H ldap://127.0.0.1 -D "$LDAP_ADMIN_DN" -w "$LDAP_ADMIN_PASSWORD"' <<'LDIF'
+dn: uid=alice@example.com,ou=users,dc=example,dc=com
+changetype: modify
+add: objectClass
+objectClass: mailForwardingUser
+-
+add: mail-forward
+mail-forward: alice@forward.example
+LDIF
+```
+
+転送を解除してローカル配送へ戻す例です。LDAPの検索結果は配送ごとに参照されるため、Postfixの
+再起動は不要です。
+
+```sh
+kubectl -n mail exec -i "$LDAP_POD" -- bash -c \
+  'ldapmodify -x -H ldap://127.0.0.1 -D "$LDAP_ADMIN_DN" -w "$LDAP_ADMIN_PASSWORD"' <<'LDIF'
+dn: uid=alice@example.com,ou=users,dc=example,dc=com
+changetype: modify
+delete: mail-forward
+-
+delete: objectClass
+objectClass: mailForwardingUser
+LDIF
+```
+
+その他の削除や変更も`ldapmodify`、`ldapdelete`をLDAP Pod内で管理DNにbindして実施できます。
 
 ```sh
 LDAP_POD=$(kubectl -n mail get pod -l app.kubernetes.io/component=ldap -o jsonpath='{.items[0].metadata.name}')
 kubectl -n mail exec "$LDAP_POD" -- ldapsearch -x \
   -H ldap://127.0.0.1 -D 'cn=admin,dc=example,dc=com' -W \
-  -b 'ou=users,dc=example,dc=com' '(objectClass=inetOrgPerson)' mail
+  -b 'ou=users,dc=example,dc=com' '(objectClass=inetOrgPerson)' mail mail-forward
 ```
 
 ## 5. DKIM
@@ -150,7 +185,7 @@ ghcr.io/<owner>/<repository>-rspamd
 ghcr.io/<owner>/<repository>-ldap
 ```
 
-タグ`v0.2.0`では`0.2.0`、`0.2`、`sha-...`タグが生成されます。`latest`はmainだけです。
+タグ`v0.3.0`では`0.3.0`、`0.3`、`sha-...`タグが生成されます。`latest`はmainだけです。
 
 `publish-chart.yaml`は`v*`タグでChartをGitHub Pagesへ公開します。事前にGitHubの
 Settings → Pages → Build and deployment → Sourceを「GitHub Actions」に設定してください。
@@ -160,8 +195,8 @@ Settings → Pages → Build and deployment → Sourceを「GitHub Actions」に
 ```sh
 # Chart.yamlのversionと、values.yamlの4イメージtagを同じ版へ更新する
 helm lint .
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 タグとChart versionが一致しない場合、公開workflowは失敗します。公開後は次のように利用できます。

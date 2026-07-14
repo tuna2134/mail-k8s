@@ -1,0 +1,9 @@
+server_host = ${LDAP_URI}
+search_base = ou=users,${LDAP_BASE_DN}
+version = 3
+bind = yes
+bind_dn = ${LDAP_BIND_DN}
+bind_pw = ${LDAP_BIND_PASSWORD}
+# No LDAP result means normal virtual_mailbox_maps/LMTP delivery.
+query_filter = (&(objectClass=mailForwardingUser)(mail=%s)(mail-forward=*))
+result_attribute = mail-forward

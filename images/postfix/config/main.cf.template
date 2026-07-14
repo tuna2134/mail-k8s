@@ -9,6 +9,8 @@ relay_domains =
 recipient_delimiter = +
 disable_vrfy_command = yes
 virtual_mailbox_domains = ${MAIL_DOMAIN}
+# An LDAP mail-forward attribute takes precedence over local mailbox delivery.
+virtual_alias_maps = ldap:/etc/postfix/ldap-forward.cf
 virtual_mailbox_maps = ldap:/etc/postfix/ldap-users.cf
 # Dovecot is a separate Deployment, so delivery uses TCP LMTP instead of a local socket.
 virtual_transport = lmtp:[${DOVECOT_HOST}]:24

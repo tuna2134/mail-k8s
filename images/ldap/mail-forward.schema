@@ -1,0 +1,15 @@
+# Optional forwarding address used by Postfix's LDAP virtual alias lookup.
+# This project-local OID is under OpenLDAP's experimental private-use arc.
+attributetype ( 1.3.6.1.4.1.4203.666.11.10.1
+  NAME 'mail-forward'
+  DESC 'Destination address for mail forwarding'
+  EQUALITY caseIgnoreIA5Match
+  SUBSTR caseIgnoreIA5SubstringsMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+
+objectclass ( 1.3.6.1.4.1.4203.666.11.10.2
+  NAME 'mailForwardingUser'
+  DESC 'Auxiliary class for optional mail forwarding'
+  SUP top
+  AUXILIARY
+  MAY ( mail-forward ) )

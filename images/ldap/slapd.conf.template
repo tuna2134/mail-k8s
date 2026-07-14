@@ -2,6 +2,8 @@ include /etc/ldap/schema/core.schema
 include /etc/ldap/schema/cosine.schema
 include /etc/ldap/schema/nis.schema
 include /etc/ldap/schema/inetorgperson.schema
+# mail-forward is optional and does not alter existing inetOrgPerson entries.
+include /opt/ldap/mail-forward.schema
 pidfile /run/slapd/slapd.pid
 argsfile /run/slapd/slapd.args
 modulepath /usr/lib/ldap
