@@ -1,46 +1,52 @@
-name: Publish Helm chart
+# Based on GitHub's official pages/static.yml starter workflow:
+# https://github.com/actions/starter-workflows/blob/main/pages/static.yml
+name: Deploy Helm repository to Pages
 
 on:
   push:
     tags: ["v*"]
+  # Allows the static Helm repository to be rebuilt from all release tags.
   workflow_dispatch:
 
+# Required by actions/deploy-pages. Chart publishing never writes a branch.
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+# Match the official starter: do not cancel a production deployment in progress.
 concurrency:
-  group: github-pages
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  # A single deployment job builds the complete static site and publishes it.
+  deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Check out chart source
-        uses: actions/checkout@v5
-
-      - name: Restore the existing chart repository
-        continue-on-error: true
-        uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          ref: gh-pages
-          path: public
-          fetch-depth: 1
+          # All release tags are needed to reproduce historical chart packages.
+          fetch-depth: 0
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
-      - name: Validate release tag and chart
+      - name: Validate current release
         shell: bash
         run: |
+          set -euo pipefail
           helm lint .
           helm template mailserver . --namespace mail > /tmp/mailserver.yaml
+
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             chart_version=$(helm show chart . | awk '$1 == "version:" { print $2 }')
             tag_version=${GITHUB_REF_NAME#v}
@@ -48,7 +54,8 @@ jobs:
               echo "Chart version ${chart_version} does not match tag ${tag_version}" >&2
               exit 1
             fi
-            # Prevent publishing a chart that points at image tags not built by this release.
+
+            # Each release Chart must reference image tags built from the same tag.
             for component in postfix dovecot rspamd ldap; do
               image_line=$(grep -E "^  ${component}:" values.yaml)
               if [[ "$image_line" != *"tag: \"${chart_version}\""* ]]; then
@@ -58,45 +65,67 @@ jobs:
             done
           fi
 
-      - name: Package chart and update repository index
+      - name: Build static Helm repository
         shell: bash
         env:
-          REPOSITORY: ${{ github.event.repository.name }}
           OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
         run: |
+          set -euo pipefail
           mkdir -p public
-          rm -rf public/.git
           owner=${OWNER,,}
-          # Published charts default to the images produced by this repository.
-          for component in postfix dovecot rspamd ldap; do
-            sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" values.yaml
-          done
-          helm package . --destination public
-          url="https://${owner}.github.io/${REPOSITORY}"
-          if [[ -f public/index.yaml ]]; then
-            helm repo index public --url "$url" --merge public/index.yaml
-          else
-            helm repo index public --url "$url"
+          chart_url="https://${owner}.github.io/${REPOSITORY}"
+
+          # Pages artifacts are immutable per run. Rebuild every historical
+          # package from Git tags so no writable gh-pages branch is required.
+          mapfile -t release_tags < <(git tag --list 'v*' --sort=v:refname)
+          if (( ${#release_tags[@]} == 0 )); then
+            echo "No v* release tags were found" >&2
+            exit 1
           fi
+
+          for tag in "${release_tags[@]}"; do
+            worktree=$(mktemp -d)
+            git archive "$tag" | tar -x -C "$worktree"
+
+            # Ignore legacy tags created before this repository became a Chart.
+            if [[ ! -f "$worktree/Chart.yaml" ]]; then
+              rm -rf "$worktree"
+              continue
+            fi
+
+            chart_version=$(helm show chart "$worktree" | awk '$1 == "version:" { print $2 }')
+            tag_version=${tag#v}
+            if [[ "$chart_version" != "$tag_version" ]]; then
+              echo "Skipping ${tag}: Chart version is ${chart_version}" >&2
+              rm -rf "$worktree"
+              continue
+            fi
+
+            # Published Charts default to images produced by this repository.
+            for component in postfix dovecot rspamd ldap; do
+              sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" "$worktree/values.yaml"
+            done
+
+            helm lint "$worktree"
+            helm package "$worktree" --destination public
+            rm -rf "$worktree"
+          done
+
+          if ! compgen -G 'public/*.tgz' > /dev/null; then
+            echo "No valid Helm packages were generated" >&2
+            exit 1
+          fi
+
+          helm repo index public --url "$chart_url"
           touch public/.nojekyll
 
-      # Keep gh-pages as the durable source of all historical chart packages.
-      - name: Persist chart repository branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: public
-          force_orphan: true
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
-      - name: Deploy GitHub Pages
+      - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
+

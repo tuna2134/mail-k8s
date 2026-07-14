@@ -158,5 +158,7 @@ helm repo update
 helm install mailserver mailserver/mailserver -n mail --create-namespace -f my-values.yaml
 ```
 
-過去の`.tgz`と`index.yaml`は`gh-pages`ブランチに保持されます。公開Chart内の4イメージ
-repositoryは、workflowが自動的に同じGitHubリポジトリのGHCRパスへ設定します。
+Pages workflowはGitHub公式の`pages/static.yml`と同じ単一deploy job・Pages artifact方式です。
+書き込み可能な`gh-pages`ブランチは使用しません。実行のたびに全`v*`タグをcheckoutして
+過去を含む`.tgz`と`index.yaml`を再生成します。公開Chart内の4イメージrepositoryは、
+workflowが自動的に同じGitHubリポジトリのGHCRパスへ設定します。
