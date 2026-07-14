@@ -1,0 +1,52 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $n }}-postfix, labels: { app.kubernetes.io/component: postfix } }
+spec:
+  replicas: 1
+  # A second Pod cannot safely share a single Postfix queue on an RWO volume.
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: postfix } }
+  template:
+    metadata: { labels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: postfix } }
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+        # Standalone HTTP-01 listens before normal containers start. The internal
+        # Service publishes not-ready endpoints so HAProxy can still reach it.
+        - name: obtain-certificate
+          image: "{{ .Values.images.certbot.repository }}:{{ .Values.images.certbot.tag }}"
+          command: ["/bin/sh","-c"]
+          args: ["test -f /etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem || until certbot certonly --standalone --preferred-challenges http --non-interactive --agree-tos --email {{ .Values.certbot.email }} -d {{ .Values.mail.hostname }} {{ if .Values.certbot.staging }}--staging{{ end }}; do sleep 60; done"]
+          ports: [{ name: http-acme, containerPort: 80 }]
+          volumeMounts: [{ name: certificates, mountPath: /etc/letsencrypt }]
+      containers:
+        - name: postfix
+          image: "{{ .Values.images.postfix.repository }}:{{ .Values.images.postfix.tag }}"
+          env:
+            - { name: MAIL_HOSTNAME, value: {{ .Values.mail.hostname | quote }} }
+            - { name: MAIL_DOMAIN, value: {{ .Values.mail.domain | quote }} }
+            - { name: MESSAGE_SIZE_LIMIT, value: {{ printf "%.0f" (float64 .Values.mail.messageSizeLimit) | quote }} }
+            - { name: LDAP_URI, value: "ldap://{{ $n }}-ldap:389" }
+            - { name: LDAP_BASE_DN, value: {{ .Values.ldap.baseDN | quote }} }
+            - { name: LDAP_BIND_DN, value: {{ .Values.ldap.bindDN | quote }} }
+            - { name: DOVECOT_HOST, value: "{{ $n }}-dovecot" }
+            - { name: RSPAMD_HOST, value: "{{ $n }}-rspamd" }
+            - { name: TLS_CERT, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem" }
+            - { name: TLS_KEY, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem" }
+            - name: LDAP_BIND_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.ldap.existingSecret }}, key: bind-password } }
+          ports: [{ name: smtp, containerPort: 25 },{ name: submissions, containerPort: 465 },{ name: submission, containerPort: 587 }]
+          readinessProbe: { tcpSocket: { port: smtp }, periodSeconds: 10 }
+          livenessProbe: { tcpSocket: { port: smtp }, periodSeconds: 30 }
+          resources: {{- toYaml .Values.resources.postfix | nindent 12 }}
+          volumeMounts: [{ name: state, mountPath: /var/spool/postfix },{ name: certificates, mountPath: /etc/letsencrypt, readOnly: true }]
+        - name: certbot-renew
+          image: "{{ .Values.images.certbot.repository }}:{{ .Values.images.certbot.tag }}"
+          command: ["/bin/sh","-c"]
+          args: ["while true; do certbot renew --standalone --non-interactive; sleep {{ .Values.certbot.renewIntervalSeconds }}; done"]
+          ports: [{ name: http-acme, containerPort: 80 }]
+          volumeMounts: [{ name: certificates, mountPath: /etc/letsencrypt }]
+      volumes:
+        - { name: state, persistentVolumeClaim: { claimName: {{ $n }}-state } }
+        - { name: certificates, persistentVolumeClaim: { claimName: {{ $n }}-certificates } }

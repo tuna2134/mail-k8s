@@ -1,0 +1,30 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: {{ $n }}-ingress }
+spec:
+  # Default-deny ingress for all internal mail components. Rules below expose
+  # LDAP, LMTP, SASL and milter only to their intended peer Pods.
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: {{ $n }} }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: gateway } }
+      ports: [{ port: 80 },{ port: 25 },{ port: 465 },{ port: 587 },{ port: 993 }]
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: postfix } }
+      ports: [{ port: 24 },{ port: 12345 },{ port: 11332 },{ port: 389 }]
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: dovecot } }
+      ports: [{ port: 389 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: {{ $n }}-gateway-public }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{ port: 80 },{ port: 25 },{ port: 465 },{ port: 587 },{ port: 993 }]

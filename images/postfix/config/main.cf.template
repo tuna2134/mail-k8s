@@ -1,0 +1,40 @@
+compatibility_level = 3.6
+myhostname = ${MAIL_HOSTNAME}
+mydomain = ${MAIL_DOMAIN}
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination = localhost
+relay_domains =
+recipient_delimiter = +
+disable_vrfy_command = yes
+virtual_mailbox_domains = ${MAIL_DOMAIN}
+virtual_mailbox_maps = ldap:/etc/postfix/ldap-users.cf
+# Dovecot is a separate Deployment, so delivery uses TCP LMTP instead of a local socket.
+virtual_transport = lmtp:[${DOVECOT_HOST}]:24
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = inet:${DOVECOT_HOST}:12345
+smtpd_sasl_auth_enable = no
+smtpd_tls_cert_file = ${TLS_CERT}
+smtpd_tls_key_file = ${TLS_KEY}
+smtpd_tls_security_level = may
+smtpd_tls_auth_only = yes
+smtpd_tls_protocols = >=TLSv1.2
+smtpd_tls_mandatory_protocols = >=TLSv1.2
+smtp_tls_security_level = may
+smtp_tls_protocols = >=TLSv1.2
+smtpd_helo_required = yes
+smtpd_delay_reject = yes
+# HAProxy preserves the original client IP for postscreen, DNSBL and logging.
+postscreen_upstream_proxy_protocol = haproxy
+smtpd_recipient_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination,reject_unknown_reverse_client_hostname,reject_non_fqdn_sender,reject_non_fqdn_recipient,reject_unknown_sender_domain,reject_rbl_client zen.spamhaus.org,reject_rbl_client bl.spamcop.net
+smtpd_sender_restrictions = reject_non_fqdn_sender,reject_unknown_sender_domain
+smtpd_relay_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination
+smtpd_client_connection_rate_limit = 30
+smtpd_client_message_rate_limit = 100
+message_size_limit = ${MESSAGE_SIZE_LIMIT}
+mailbox_size_limit = 0
+smtpd_milters = inet:${RSPAMD_HOST}:11332
+non_smtpd_milters = inet:${RSPAMD_HOST}:11332
+milter_default_action = tempfail
+milter_protocol = 6

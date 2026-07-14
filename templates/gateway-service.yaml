@@ -1,0 +1,22 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $n }}
+  {{- with .Values.service.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+  {{- with .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: gateway }
+  ports:
+    - { name: http-acme, port: 80, targetPort: http-acme }
+    - { name: smtp, port: 25, targetPort: smtp }
+    - { name: submissions, port: 465, targetPort: submissions }
+    - { name: submission, port: 587, targetPort: submission }
+    - { name: imaps, port: 993, targetPort: imaps }
+

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["mail", "images", "certbot", "ldap", "persistence"],
+  "properties": {
+    "mail": {
+      "type": "object",
+      "required": ["hostname", "domain", "postmaster"],
+      "properties": {
+        "hostname": { "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])$" },
+        "domain": { "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])$" },
+        "postmaster": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+$" }
+      }
+    },
+    "ldap": {
+      "type": "object",
+      "required": ["baseDN", "adminDN", "bindDN", "existingSecret"],
+      "properties": { "existingSecret": { "type": "string", "minLength": 1 } }
+    },
+    "certbot": {
+      "type": "object",
+      "required": ["email"],
+      "properties": { "email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+$" } }
+    }
+  }
+}

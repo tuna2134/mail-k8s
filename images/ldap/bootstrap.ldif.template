@@ -1,0 +1,18 @@
+dn: ${LDAP_BASE_DN}
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: ${LDAP_ORGANIZATION}
+dc: ${LDAP_DC}
+
+dn: ou=users,${LDAP_BASE_DN}
+objectClass: organizationalUnit
+ou: users
+
+dn: cn=mail-reader,${LDAP_BASE_DN}
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: mail-reader
+description: Read-only bind identity for Postfix and Dovecot
+userPassword: ${LDAP_BINDPW_HASH}
+

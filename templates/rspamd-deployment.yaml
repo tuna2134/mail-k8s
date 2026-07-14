@@ -1,0 +1,22 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $n }}-rspamd, labels: { app.kubernetes.io/component: rspamd } }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: rspamd } }
+  template:
+    metadata: { labels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: rspamd } }
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: rspamd
+          image: "{{ .Values.images.rspamd.repository }}:{{ .Values.images.rspamd.tag }}"
+          env: [{ name: MAIL_DOMAIN, value: {{ .Values.mail.domain | quote }} }]
+          ports: [{ name: milter, containerPort: 11332 }]
+          readinessProbe: { tcpSocket: { port: milter }, periodSeconds: 10 }
+          resources: {{- toYaml .Values.resources.rspamd | nindent 12 }}
+          volumeMounts: [{ name: rspamd, mountPath: /var/lib/rspamd }]
+      volumes: [{ name: rspamd, persistentVolumeClaim: { claimName: {{ $n }}-rspamd } }]
+

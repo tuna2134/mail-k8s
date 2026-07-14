@@ -1,0 +1,28 @@
+include /etc/ldap/schema/core.schema
+include /etc/ldap/schema/cosine.schema
+include /etc/ldap/schema/nis.schema
+include /etc/ldap/schema/inetorgperson.schema
+pidfile /run/slapd/slapd.pid
+argsfile /run/slapd/slapd.args
+modulepath /usr/lib/ldap
+moduleload back_mdb
+database mdb
+maxsize 1073741824
+suffix "${LDAP_BASE_DN}"
+rootdn "${LDAP_ADMIN_DN}"
+rootpw ${LDAP_ROOTPW_HASH}
+directory /var/lib/ldap
+index objectClass eq
+index uid,mail eq
+# Dovecot verifies passwords with LDAP bind; the reader never receives hashes.
+access to attrs=userPassword
+  by self write
+  by dn.exact="${LDAP_BIND_DN}" auth
+  by anonymous auth
+  by * none
+# Postfix/Dovecot need directory reads, while only the root DN may modify entries.
+access to *
+  by dn.exact="${LDAP_ADMIN_DN}" manage
+  by dn.exact="${LDAP_BIND_DN}" read
+  by users read
+  by * none

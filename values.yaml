@@ -1,0 +1,47 @@
+mail:
+  hostname: mail.example.com
+  domain: example.com
+  postmaster: postmaster@example.com
+  messageSizeLimit: 26214400
+images:
+  # Build the four local images from images/* and push them before installing.
+  postfix: { repository: registry.example.com/plain-postfix, tag: "0.2.0", pullPolicy: IfNotPresent }
+  dovecot: { repository: registry.example.com/plain-dovecot, tag: "0.2.0", pullPolicy: IfNotPresent }
+  rspamd: { repository: registry.example.com/plain-rspamd, tag: "0.2.0", pullPolicy: IfNotPresent }
+  ldap: { repository: registry.example.com/plain-ldap, tag: "0.2.0", pullPolicy: IfNotPresent }
+  certbot: { repository: certbot/certbot, tag: "v5.6.0", pullPolicy: IfNotPresent }
+  haproxy: { repository: haproxy, tag: "3.2-alpine", pullPolicy: IfNotPresent }
+imagePullSecrets: []
+service:
+  type: LoadBalancer
+  loadBalancerIP: ""
+  externalTrafficPolicy: Local
+  annotations: {}
+certbot:
+  # HTTP-01 needs the public A record and TCP/80 before the first Pod starts.
+  email: admin@example.com
+  staging: false
+  renewIntervalSeconds: 43200
+ldap:
+  # The Secret must contain admin-password and bind-password.
+  baseDN: dc=example,dc=com
+  organization: Example
+  dc: example
+  adminDN: cn=admin,dc=example,dc=com
+  bindDN: cn=mail-reader,dc=example,dc=com
+  existingSecret: mailserver-ldap-credentials
+persistence:
+  # certificates must use an RWX-capable StorageClass: Postfix and Dovecot share it.
+  mail: { size: 20Gi, storageClass: "" }
+  state: { size: 2Gi, storageClass: "" }
+  rspamd: { size: 2Gi, storageClass: "" }
+  certificates: { size: 1Gi, storageClass: "" }
+  ldap: { size: 2Gi, storageClass: "" }
+resources:
+  postfix: { requests: { cpu: 200m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
+  dovecot: { requests: { cpu: 200m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
+  rspamd: { requests: { cpu: 300m, memory: 512Mi }, limits: { cpu: "1", memory: 1Gi } }
+  ldap: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: 500m, memory: 512Mi } }
+nameOverride: ""
+fullnameOverride: ""
+serviceAccount: { create: true, annotations: {}, name: "" }

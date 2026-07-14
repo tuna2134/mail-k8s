@@ -1,0 +1,8 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $n }}-rspamd }
+spec:
+  selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: rspamd }
+  ports: [{ name: milter, port: 11332, targetPort: milter }]
+

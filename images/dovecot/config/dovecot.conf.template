@@ -1,0 +1,54 @@
+protocols = imap lmtp
+listen = *
+mail_home = /var/mail/%d/%n
+mail_location = maildir:~/Maildir
+first_valid_uid = 5000
+last_valid_uid = 5000
+ssl = required
+ssl_min_protocol = TLSv1.2
+ssl_cert = <${TLS_CERT}
+ssl_key = <${TLS_KEY}
+auth_mechanisms = plain login
+disable_plaintext_auth = yes
+passdb {
+  driver = ldap
+  args = /etc/dovecot/dovecot-ldap.conf.ext
+}
+userdb {
+  driver = ldap
+  args = /etc/dovecot/dovecot-ldap.conf.ext
+}
+# NetworkPolicy restricts these PROXY-aware listeners to the gateway/Postfix Pods.
+haproxy_trusted_networks = 0.0.0.0/0
+# Port 12345 is SMTP AUTH for Postfix; port 24 is mail delivery from Postfix.
+service auth {
+  inet_listener auth-postfix {
+    address = 0.0.0.0
+    port = 12345
+  }
+}
+service lmtp {
+  inet_listener lmtp {
+    address = 0.0.0.0
+    port = 24
+  }
+}
+service imap-login {
+  inet_listener imaps {
+    port = 993
+    ssl = yes
+    haproxy = yes
+  }
+}
+protocol lmtp {
+  postmaster_address = ${POSTMASTER_ADDRESS}
+}
+namespace inbox {
+  inbox = yes
+  mailbox Junk {
+    special_use = \Junk
+    auto = subscribe
+  }
+}
+log_path = /dev/stderr
+info_log_path = /dev/stdout

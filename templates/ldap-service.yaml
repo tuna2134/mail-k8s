@@ -1,0 +1,8 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $n }}-ldap }
+spec:
+  selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: ldap }
+  ports: [{ name: ldap, port: 389, targetPort: ldap }]
+

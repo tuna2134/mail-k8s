@@ -1,0 +1,31 @@
+mail:
+  hostname: mail.example.com
+  domain: example.com
+  postmaster: postmaster@example.com
+images:
+  postfix: { repository: ghcr.io/your-org/plain-postfix, tag: "0.2.0", pullPolicy: IfNotPresent }
+  dovecot: { repository: ghcr.io/your-org/plain-dovecot, tag: "0.2.0", pullPolicy: IfNotPresent }
+  rspamd: { repository: ghcr.io/your-org/plain-rspamd, tag: "0.2.0", pullPolicy: IfNotPresent }
+  ldap: { repository: ghcr.io/your-org/plain-ldap, tag: "0.2.0", pullPolicy: IfNotPresent }
+  certbot: { repository: certbot/certbot, tag: "v5.6.0", pullPolicy: IfNotPresent }
+  haproxy: { repository: haproxy, tag: "3.2-alpine", pullPolicy: IfNotPresent }
+service:
+  type: LoadBalancer
+  loadBalancerIP: "203.0.113.10"
+  externalTrafficPolicy: Local
+certbot:
+  email: postmaster@example.com
+  staging: false
+ldap:
+  baseDN: dc=example,dc=com
+  organization: Example
+  dc: example
+  adminDN: cn=admin,dc=example,dc=com
+  bindDN: cn=mail-reader,dc=example,dc=com
+  existingSecret: mailserver-ldap-credentials
+persistence:
+  mail: { size: 100Gi, storageClass: longhorn }
+  state: { size: 5Gi, storageClass: longhorn }
+  rspamd: { size: 5Gi, storageClass: longhorn }
+  certificates: { size: 1Gi, storageClass: longhorn }
+  ldap: { size: 5Gi, storageClass: longhorn }

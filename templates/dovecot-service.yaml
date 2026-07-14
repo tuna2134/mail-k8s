@@ -1,0 +1,11 @@
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $n }}-dovecot }
+spec:
+  selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: dovecot }
+  ports:
+    - { name: lmtp, port: 24, targetPort: lmtp }
+    - { name: imaps, port: 993, targetPort: imaps }
+    - { name: auth, port: 12345, targetPort: auth }
+

@@ -1,0 +1,102 @@
+name: Publish Helm chart
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out chart source
+        uses: actions/checkout@v5
+
+      - name: Restore the existing chart repository
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          path: public
+          fetch-depth: 1
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate release tag and chart
+        shell: bash
+        run: |
+          helm lint .
+          helm template mailserver . --namespace mail > /tmp/mailserver.yaml
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            chart_version=$(helm show chart . | awk '$1 == "version:" { print $2 }')
+            tag_version=${GITHUB_REF_NAME#v}
+            if [[ "$chart_version" != "$tag_version" ]]; then
+              echo "Chart version ${chart_version} does not match tag ${tag_version}" >&2
+              exit 1
+            fi
+            # Prevent publishing a chart that points at image tags not built by this release.
+            for component in postfix dovecot rspamd ldap; do
+              image_line=$(grep -E "^  ${component}:" values.yaml)
+              if [[ "$image_line" != *"tag: \"${chart_version}\""* ]]; then
+                echo "images.${component}.tag must be ${chart_version}" >&2
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Package chart and update repository index
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          mkdir -p public
+          rm -rf public/.git
+          owner=${OWNER,,}
+          # Published charts default to the images produced by this repository.
+          for component in postfix dovecot rspamd ldap; do
+            sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" values.yaml
+          done
+          helm package . --destination public
+          url="https://${owner}.github.io/${REPOSITORY}"
+          if [[ -f public/index.yaml ]]; then
+            helm repo index public --url "$url" --merge public/index.yaml
+          else
+            helm repo index public --url "$url"
+          fi
+          touch public/.nojekyll
+
+      # Keep gh-pages as the durable source of all historical chart packages.
+      - name: Persist chart repository branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: public
+          force_orphan: true
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

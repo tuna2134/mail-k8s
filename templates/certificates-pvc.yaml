@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "mailserver.fullname" . }}-certificates
+  labels:
+    {{- include "mailserver.labels" . | nindent 4 }}
+spec:
+  # Mounted by two Deployments. The selected StorageClass must really support RWX.
+  accessModes: [ReadWriteMany]
+  {{- with .Values.persistence.certificates.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.certificates.size }}

@@ -1,0 +1,10 @@
+uris = ${LDAP_URI}
+dn = ${LDAP_BIND_DN}
+dnpass = ${LDAP_BIND_PASSWORD}
+ldap_version = 3
+base = ou=users,${LDAP_BASE_DN}
+scope = subtree
+auth_bind = yes
+pass_filter = (&(objectClass=inetOrgPerson)(mail=%u))
+user_filter = (&(objectClass=inetOrgPerson)(mail=%u))
+user_attrs = =home=/var/mail/%d/%n,=mail=maildir:~/Maildir,=uid=5000,=gid=5000
