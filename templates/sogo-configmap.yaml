@@ -1,0 +1,55 @@
+{{- if .Values.sogo.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mailserver.fullname" . }}-sogo-nginx
+data:
+  nginx.conf: |
+    pid /tmp/nginx.pid;
+    error_log /dev/stderr info;
+    events {}
+    http {
+      access_log /dev/stdout;
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+      client_body_temp_path /tmp/client-body;
+      proxy_temp_path /tmp/proxy;
+
+      server {
+        listen 8443 ssl;
+        server_name {{ .Values.mail.hostname }};
+        ssl_certificate /etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        client_max_body_size {{ .Values.mail.messageSizeLimit }};
+
+        location = / { return 302 /SOGo; }
+        location = /.well-known/caldav { return 301 /SOGo/dav; }
+        location = /.well-known/carddav { return 301 /SOGo/dav; }
+
+        location ^~ /SOGo.woa/WebServerResources/ {
+          alias /usr/share/sogo/WebServerResources/;
+          expires 1y;
+        }
+        location ^~ /SOGo/WebServerResources/ {
+          alias /usr/share/sogo/WebServerResources/;
+          expires 1y;
+        }
+        location /SOGo {
+          proxy_pass http://127.0.0.1:20000;
+          proxy_http_version 1.0;
+          proxy_set_header Host $host;
+          proxy_set_header x-webobjects-server-port 443;
+          proxy_set_header x-webobjects-server-name $host;
+          proxy_set_header x-webobjects-server-url https://$host;
+          proxy_set_header x-webobjects-server-protocol HTTP/1.0;
+          proxy_set_header x-webobjects-remote-host $remote_addr;
+          proxy_set_header x-webobjects-remote-user "";
+          proxy_read_timeout 3600s;
+          proxy_buffer_size 128k;
+          proxy_buffers 64 512k;
+          proxy_busy_buffers_size 512k;
+        }
+      }
+    }
+{{- end }}

@@ -18,9 +18,17 @@ ldap:
   adminDN: cn=admin,dc=example,dc=com
   bindDN: cn=mail-reader,dc=example,dc=com
   existingSecret: mailserver-ldap-credentials
+sogo:
+  enabled: true
+  existingSecret: mailserver-sogo-credentials
+  replicas: 1
+  workers: 3
+  language: Japanese
+  timezone: Asia/Tokyo
 persistence:
   mail: { size: 100Gi, storageClass: longhorn }
   state: { size: 5Gi, storageClass: longhorn }
   rspamd: { size: 5Gi, storageClass: longhorn }
   certificates: { size: 1Gi, storageClass: longhorn }
   ldap: { size: 5Gi, storageClass: longhorn }
+  sogoPostgresql: { size: 20Gi, storageClass: longhorn }

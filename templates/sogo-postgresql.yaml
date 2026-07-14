@@ -1,0 +1,47 @@
+{{- if .Values.sogo.enabled }}
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $n }}-sogo-postgresql }
+spec:
+  selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: sogo-postgresql }
+  ports: [{ name: postgresql, port: 5432, targetPort: postgresql }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $n }}-sogo-postgresql, labels: { app.kubernetes.io/component: sogo-postgresql } }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: sogo-postgresql } }
+  template:
+    metadata: { labels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: sogo-postgresql } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { fsGroup: 999, fsGroupChangePolicy: OnRootMismatch }
+      containers:
+        - name: postgresql
+          image: "{{ .Values.images.postgresql.repository }}:{{ .Values.images.postgresql.tag }}"
+          imagePullPolicy: {{ .Values.images.postgresql.pullPolicy }}
+          env:
+            - { name: POSTGRES_DB, value: sogo }
+            - { name: POSTGRES_USER, value: sogo }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.sogo.existingSecret }}, key: postgres-password } }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports: [{ name: postgresql, containerPort: 5432 }]
+          startupProbe: { exec: { command: ["/usr/bin/pg_isready","-U","sogo","-d","sogo"] }, failureThreshold: 30, periodSeconds: 5 }
+          readinessProbe: { exec: { command: ["/usr/bin/pg_isready","-U","sogo","-d","sogo"] }, periodSeconds: 10 }
+          livenessProbe: { exec: { command: ["/usr/bin/pg_isready","-U","sogo","-d","sogo"] }, periodSeconds: 30 }
+          resources: {{- toYaml .Values.resources.sogoPostgresql | nindent 12 }}
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+      volumes: [{ name: data, persistentVolumeClaim: { claimName: {{ $n }}-sogo-postgresql } }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: {{ $n }}-sogo-postgresql }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: {{ .Values.persistence.sogoPostgresql.size }} } }
+  {{- include "mailserver.storageClass" .Values.persistence.sogoPostgresql | nindent 2 }}
+{{- end }}

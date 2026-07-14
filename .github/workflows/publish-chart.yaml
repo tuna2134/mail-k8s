@@ -58,7 +58,7 @@ jobs:
           fi
 
           # Tag and manual deployments must reference an internally consistent image set.
-          for component in postfix dovecot rspamd ldap; do
+          for component in postfix dovecot rspamd ldap sogo; do
             image_line=$(grep -E "^  ${component}:" values.yaml)
             if [[ "$image_line" != *"tag: \"${chart_version}\""* ]]; then
               echo "images.${component}.tag must be ${chart_version}" >&2

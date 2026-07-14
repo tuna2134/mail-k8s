@@ -29,7 +29,7 @@ spec:
             - { name: TLS_KEY, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem" }
             - name: LDAP_BIND_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.ldap.existingSecret }}, key: bind-password } }
-          ports: [{ name: lmtp, containerPort: 24 },{ name: imaps, containerPort: 993 },{ name: auth, containerPort: 12345 }]
+          ports: [{ name: lmtp, containerPort: 24 },{ name: imaps, containerPort: 993 }{{ if .Values.sogo.enabled }},{ name: imap-sogo, containerPort: 1143 },{ name: sieve-sogo, containerPort: 4190 }{{ end }},{ name: auth, containerPort: 12345 }]
           readinessProbe: { tcpSocket: { port: imaps }, periodSeconds: 10 }
           livenessProbe: { tcpSocket: { port: imaps }, periodSeconds: 30 }
           resources: {{- toYaml .Values.resources.dovecot | nindent 12 }}

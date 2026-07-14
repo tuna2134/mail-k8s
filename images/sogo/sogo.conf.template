@@ -1,0 +1,48 @@
+{
+  SOGoProfileURL = ${PROFILE_URL_JSON};
+  OCSFolderInfoURL = ${FOLDER_INFO_URL_JSON};
+  OCSSessionsFolderURL = ${SESSIONS_URL_JSON};
+  OCSStoreURL = ${STORE_URL_JSON};
+  OCSAclURL = ${ACL_URL_JSON};
+  OCSCacheFolderURL = ${CACHE_URL_JSON};
+
+  SOGoUserSources = (
+    {
+      type = ldap;
+      id = directory;
+      displayName = "Shared addresses";
+      hostname = ${LDAP_URI_JSON};
+      baseDN = ${LDAP_BASE_DN_JSON};
+      bindDN = ${LDAP_BIND_DN_JSON};
+      bindPassword = ${LDAP_BIND_PASSWORD_JSON};
+      scope = SUB;
+      filter = "(objectClass=inetOrgPerson)";
+      CNFieldName = cn;
+      IDFieldName = mail;
+      UIDFieldName = mail;
+      MailFieldNames = (mail, "mail-alias");
+      canAuthenticate = YES;
+      isAddressBook = YES;
+    }
+  );
+
+  SOGoMailDomain = ${MAIL_DOMAIN_JSON};
+  SOGoIMAPServer = ${IMAP_HOST_JSON};
+  SOGoSieveServer = ${SIEVE_HOST_JSON};
+  SOGoSMTPServer = ${SMTP_HOST_JSON};
+  SOGoMailingMechanism = smtp;
+  SOGoSMTPAuthenticationType = PLAIN;
+  SOGoForceExternalLoginWithEmail = YES;
+  SOGoDraftsFolderName = Drafts;
+  SOGoSentFolderName = Sent;
+  SOGoTrashFolderName = Trash;
+  SOGoJunkFolderName = Junk;
+
+  SOGoLanguage = ${SOGO_LANGUAGE_JSON};
+  SOGoTimeZone = ${SOGO_TIMEZONE_JSON};
+  SOGoAppointmentSendEMailNotifications = YES;
+  SOGoEnableEMailAlarms = NO;
+  SOGoLoginModule = Mail;
+  SOGoMemcachedHost = "127.0.0.1";
+  SOGoTrustProxyAuthentication = NO;
+}

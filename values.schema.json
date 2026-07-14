@@ -6,6 +6,18 @@
       "type": "string",
       "pattern": "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
     },
+    "sogo": {
+      "type": "object",
+      "required": ["enabled", "existingSecret", "replicas", "workers", "language", "timezone"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingSecret": { "type": "string", "minLength": 1 },
+        "replicas": { "type": "integer", "minimum": 1 },
+        "workers": { "type": "integer", "minimum": 1 },
+        "language": { "type": "string", "minLength": 1 },
+        "timezone": { "type": "string", "pattern": "^[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+$" }
+      }
+    },
     "mail": {
       "type": "object",
       "required": ["hostname", "domains", "postmaster"],

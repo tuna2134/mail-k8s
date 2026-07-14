@@ -1,14 +1,16 @@
-protocols = imap lmtp
+protocols = imap lmtp sieve
 listen = *
 mail_location = maildir:~/Maildir
 first_valid_uid = 5000
 last_valid_uid = 5000
-ssl = required
+ssl = yes
 ssl_min_protocol = TLSv1.2
 ssl_cert = <${TLS_CERT}
 ssl_key = <${TLS_KEY}
 auth_mechanisms = plain login
-disable_plaintext_auth = yes
+# Plain authentication is permitted only on the NetworkPolicy-protected SOGo
+# listener below. The public listener remains implicit TLS on port 993.
+disable_plaintext_auth = no
 passdb {
   driver = ldap
   args = /etc/dovecot/dovecot-ldap.conf.ext
@@ -33,6 +35,10 @@ service lmtp {
   }
 }
 service imap-login {
+  inet_listener imap-sogo {
+    port = 1143
+    ssl = no
+  }
   inet_listener imaps {
     port = 993
     ssl = yes
@@ -41,6 +47,7 @@ service imap-login {
 }
 protocol lmtp {
   postmaster_address = ${POSTMASTER_ADDRESS}
+  mail_plugins = sieve
 }
 namespace inbox {
   inbox = yes

@@ -15,8 +15,10 @@ spec:
   selector: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: gateway }
   ports:
     - { name: http-acme, port: 80, targetPort: http-acme }
+    {{- if .Values.sogo.enabled }}
+    - { name: https-sogo, port: 443, targetPort: https-sogo }
+    {{- end }}
     - { name: smtp, port: 25, targetPort: smtp }
     - { name: submissions, port: 465, targetPort: submissions }
     - { name: submission, port: 587, targetPort: submission }
     - { name: imaps, port: 993, targetPort: imaps }
-

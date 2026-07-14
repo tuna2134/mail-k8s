@@ -34,6 +34,15 @@ data:
       default_backend dovecot-imaps
     backend dovecot-imaps
       server dovecot {{ include "mailserver.fullname" . }}-dovecot:993 send-proxy-v2
+    {{- if .Values.sogo.enabled }}
+    frontend sogo-https
+      bind :443
+      timeout client 1h
+      default_backend sogo-https
+    backend sogo-https
+      timeout server 1h
+      server sogo {{ include "mailserver.fullname" . }}-sogo:8443
+    {{- end }}
     frontend acme
       bind :80
       default_backend certbot-http

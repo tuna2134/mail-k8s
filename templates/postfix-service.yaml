@@ -10,4 +10,6 @@ spec:
     - { name: smtp, port: 25, targetPort: smtp }
     - { name: submissions, port: 465, targetPort: submissions }
     - { name: submission, port: 587, targetPort: submission }
-
+    {{- if .Values.sogo.enabled }}
+    - { name: sogo-smtp, port: 2587, targetPort: sogo-smtp }
+    {{- end }}

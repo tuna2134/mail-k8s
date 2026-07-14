@@ -7,10 +7,15 @@ mail:
   messageSizeLimit: 26214400
 images:
   # Project images are public on GHCR. Override these only for a fork or local build.
-  postfix: { repository: ghcr.io/tuna2134/mail-k8s-postfix, tag: "0.4.0", pullPolicy: IfNotPresent }
-  dovecot: { repository: ghcr.io/tuna2134/mail-k8s-dovecot, tag: "0.4.0", pullPolicy: IfNotPresent }
-  rspamd: { repository: ghcr.io/tuna2134/mail-k8s-rspamd, tag: "0.4.0", pullPolicy: IfNotPresent }
-  ldap: { repository: ghcr.io/tuna2134/mail-k8s-ldap, tag: "0.4.0", pullPolicy: IfNotPresent }
+  postfix: { repository: ghcr.io/tuna2134/mail-k8s-postfix, tag: "0.5.0", pullPolicy: IfNotPresent }
+  dovecot: { repository: ghcr.io/tuna2134/mail-k8s-dovecot, tag: "0.5.0", pullPolicy: IfNotPresent }
+  rspamd: { repository: ghcr.io/tuna2134/mail-k8s-rspamd, tag: "0.5.0", pullPolicy: IfNotPresent }
+  ldap: { repository: ghcr.io/tuna2134/mail-k8s-ldap, tag: "0.5.0", pullPolicy: IfNotPresent }
+  # The upstream public SOGo package repository currently publishes amd64 packages.
+  sogo: { repository: ghcr.io/tuna2134/mail-k8s-sogo, tag: "0.5.0", pullPolicy: IfNotPresent }
+  postgresql: { repository: postgres, tag: "17-bookworm", pullPolicy: IfNotPresent }
+  nginx: { repository: nginx, tag: "1.28-alpine", pullPolicy: IfNotPresent }
+  memcached: { repository: memcached, tag: "1.6-alpine", pullPolicy: IfNotPresent }
   certbot: { repository: certbot/certbot, tag: "v5.6.0", pullPolicy: IfNotPresent }
   haproxy: { repository: haproxy, tag: "3.2-alpine", pullPolicy: IfNotPresent }
 imagePullSecrets: []
@@ -32,18 +37,31 @@ ldap:
   adminDN: cn=admin,dc=example,dc=com
   bindDN: cn=mail-reader,dc=example,dc=com
   existingSecret: mailserver-ldap-credentials
+sogo:
+  enabled: true
+  # The Secret must contain postgres-password.
+  existingSecret: mailserver-sogo-credentials
+  replicas: 1
+  workers: 3
+  language: Japanese
+  timezone: Asia/Tokyo
 persistence:
-  # certificates must use an RWX-capable StorageClass: Postfix and Dovecot share it.
+  # certificates must use an RWX-capable StorageClass: Postfix, Dovecot and SOGo share it.
   mail: { size: 20Gi, storageClass: "" }
   state: { size: 2Gi, storageClass: "" }
   rspamd: { size: 2Gi, storageClass: "" }
   certificates: { size: 1Gi, storageClass: "" }
   ldap: { size: 2Gi, storageClass: "" }
+  sogoPostgresql: { size: 5Gi, storageClass: "" }
 resources:
   postfix: { requests: { cpu: 200m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
   dovecot: { requests: { cpu: 200m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
   rspamd: { requests: { cpu: 300m, memory: 512Mi }, limits: { cpu: "1", memory: 1Gi } }
   ldap: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: 500m, memory: 512Mi } }
+  sogo: { requests: { cpu: 200m, memory: 512Mi }, limits: { cpu: "1", memory: 2Gi } }
+  sogoNginx: { requests: { cpu: 25m, memory: 32Mi }, limits: { cpu: 250m, memory: 128Mi } }
+  sogoPostgresql: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
+  sogoMemcached: { requests: { cpu: 25m, memory: 64Mi }, limits: { cpu: 250m, memory: 128Mi } }
 nameOverride: ""
 fullnameOverride: ""
 serviceAccount: { create: true, annotations: {}, name: "" }

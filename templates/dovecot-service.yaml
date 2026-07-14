@@ -7,5 +7,8 @@ spec:
   ports:
     - { name: lmtp, port: 24, targetPort: lmtp }
     - { name: imaps, port: 993, targetPort: imaps }
+    {{- if .Values.sogo.enabled }}
+    - { name: imap-sogo, port: 1143, targetPort: imap-sogo }
+    - { name: sieve-sogo, port: 4190, targetPort: sieve-sogo }
+    {{- end }}
     - { name: auth, port: 12345, targetPort: auth }
-

@@ -1,0 +1,94 @@
+{{- if .Values.sogo.enabled }}
+{{- $n := include "mailserver.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $n }}-sogo, labels: { app.kubernetes.io/component: sogo } }
+spec:
+  replicas: {{ .Values.sogo.replicas }}
+  selector: { matchLabels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: sogo } }
+  template:
+    metadata: { labels: { app.kubernetes.io/name: {{ $n }}, app.kubernetes.io/component: sogo } }
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+        - name: wait-certificate
+          image: "{{ .Values.images.certbot.repository }}:{{ .Values.images.certbot.tag }}"
+          command: ["/bin/sh","-c"]
+          args: ["until test -f /etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem; do sleep 10; done"]
+          volumeMounts: [{ name: certificates, mountPath: /etc/letsencrypt, readOnly: true }]
+        - name: copy-web-resources
+          image: "{{ .Values.images.sogo.repository }}:{{ .Values.images.sogo.tag }}"
+          command: ["/bin/sh","-c"]
+          args: ["cp -a /usr/lib/GNUstep/SOGo/WebServerResources/. /web-resources/"]
+          securityContext: { runAsUser: 0, allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          volumeMounts: [{ name: web-resources, mountPath: /web-resources }]
+      containers:
+        - name: sogo
+          image: "{{ .Values.images.sogo.repository }}:{{ .Values.images.sogo.tag }}"
+          imagePullPolicy: {{ .Values.images.sogo.pullPolicy }}
+          env:
+            - { name: POSTGRES_HOST, value: "{{ $n }}-sogo-postgresql" }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.sogo.existingSecret }}, key: postgres-password } }
+            - { name: LDAP_URI, value: "ldap://{{ $n }}-ldap:389" }
+            - { name: LDAP_BASE_DN, value: "ou=users,{{ .Values.ldap.baseDN }}" }
+            - { name: LDAP_BIND_DN, value: {{ .Values.ldap.bindDN | quote }} }
+            - name: LDAP_BIND_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.ldap.existingSecret }}, key: bind-password } }
+            - { name: IMAP_HOST, value: "imap://{{ $n }}-dovecot:1143" }
+            - { name: SIEVE_HOST, value: "sieve://{{ $n }}-dovecot:4190" }
+            - { name: SMTP_HOST, value: "{{ $n }}-postfix:2587" }
+            - { name: MAIL_DOMAIN, value: {{ first .Values.mail.domains | quote }} }
+            - { name: SOGO_LANGUAGE, value: {{ .Values.sogo.language | quote }} }
+            - { name: SOGO_TIMEZONE, value: {{ .Values.sogo.timezone | quote }} }
+            - { name: SOGO_WORKERS, value: {{ .Values.sogo.workers | quote }} }
+          ports: [{ name: sogo, containerPort: 20000 }]
+          startupProbe: { httpGet: { path: /SOGo, port: sogo }, failureThreshold: 30, periodSeconds: 10 }
+          readinessProbe: { httpGet: { path: /SOGo, port: sogo }, periodSeconds: 10 }
+          livenessProbe: { httpGet: { path: /SOGo, port: sogo }, periodSeconds: 30 }
+          resources: {{- toYaml .Values.resources.sogo | nindent 12 }}
+        - name: memcached
+          image: "{{ .Values.images.memcached.repository }}:{{ .Values.images.memcached.tag }}"
+          imagePullPolicy: {{ .Values.images.memcached.pullPolicy }}
+          args: ["-m","64","-I","4m"]
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          ports: [{ name: memcached, containerPort: 11211 }]
+          readinessProbe: { tcpSocket: { port: memcached }, periodSeconds: 10 }
+          livenessProbe: { tcpSocket: { port: memcached }, periodSeconds: 30 }
+          resources: {{- toYaml .Values.resources.sogoMemcached | nindent 12 }}
+        - name: nginx
+          image: "{{ .Values.images.nginx.repository }}:{{ .Values.images.nginx.tag }}"
+          imagePullPolicy: {{ .Values.images.nginx.pullPolicy }}
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -eu
+              nginx -g 'daemon off;' & pid=$!
+              trap 'kill -TERM "$pid" 2>/dev/null || true; wait "$pid"' TERM INT
+              old=""
+              while kill -0 "$pid" 2>/dev/null; do
+                sleep 300 & wait $!
+                new=$(cksum /etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem /etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem 2>/dev/null || true)
+                if [ -n "$old" ] && [ "$new" != "$old" ]; then nginx -s reload; fi
+                old=$new
+              done
+              wait "$pid"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          ports: [{ name: https, containerPort: 8443 }]
+          readinessProbe: { tcpSocket: { port: https }, periodSeconds: 10 }
+          livenessProbe: { tcpSocket: { port: https }, periodSeconds: 30 }
+          resources: {{- toYaml .Values.resources.sogoNginx | nindent 12 }}
+          volumeMounts:
+            - { name: nginx-config, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf, readOnly: true }
+            - { name: web-resources, mountPath: /usr/share/sogo/WebServerResources, readOnly: true }
+            - { name: certificates, mountPath: /etc/letsencrypt, readOnly: true }
+      volumes:
+        - { name: nginx-config, configMap: { name: {{ $n }}-sogo-nginx } }
+        - { name: web-resources, emptyDir: {} }
+        - { name: certificates, persistentVolumeClaim: { claimName: {{ $n }}-certificates } }
+{{- end }}

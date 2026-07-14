@@ -37,7 +37,7 @@ spec:
             - { name: TLS_KEY, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem" }
             - name: LDAP_BIND_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.ldap.existingSecret }}, key: bind-password } }
-          ports: [{ name: smtp, containerPort: 25 },{ name: submissions, containerPort: 465 },{ name: submission, containerPort: 587 }]
+          ports: [{ name: smtp, containerPort: 25 },{ name: submissions, containerPort: 465 },{ name: submission, containerPort: 587 }{{ if .Values.sogo.enabled }},{ name: sogo-smtp, containerPort: 2587 }{{ end }}]
           readinessProbe: { tcpSocket: { port: smtp }, periodSeconds: 10 }
           livenessProbe: { tcpSocket: { port: smtp }, periodSeconds: 30 }
           resources: {{- toYaml .Values.resources.postfix | nindent 12 }}

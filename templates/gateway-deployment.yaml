@@ -13,8 +13,7 @@ spec:
         - name: haproxy
           image: "{{ .Values.images.haproxy.repository }}:{{ .Values.images.haproxy.tag }}"
           args: ["haproxy","-W","-db","-f","/usr/local/etc/haproxy/haproxy.cfg"]
-          ports: [{ name: http-acme, containerPort: 80 },{ name: smtp, containerPort: 25 },{ name: submissions, containerPort: 465 },{ name: submission, containerPort: 587 },{ name: imaps, containerPort: 993 }]
+          ports: [{ name: http-acme, containerPort: 80 },{ name: https-sogo, containerPort: 443 },{ name: smtp, containerPort: 25 },{ name: submissions, containerPort: 465 },{ name: submission, containerPort: 587 },{ name: imaps, containerPort: 993 }]
           readinessProbe: { tcpSocket: { port: smtp }, periodSeconds: 10 }
           volumeMounts: [{ name: config, mountPath: /usr/local/etc/haproxy, readOnly: true }]
       volumes: [{ name: config, configMap: { name: {{ $n }}-haproxy } }]
-
