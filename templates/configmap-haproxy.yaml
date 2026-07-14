@@ -18,24 +18,28 @@ data:
       default_backend postfix-smtp
     backend postfix-smtp
       # PROXY v2 retains the remote IP after crossing the gateway Pod.
-      server postfix {{ include "mailserver.fullname" . }}-postfix:25 send-proxy-v2 check
+      server postfix {{ include "mailserver.fullname" . }}-postfix:25 send-proxy-v2
     frontend submissions
       bind :465
       default_backend postfix-submissions
     backend postfix-submissions
-      server postfix {{ include "mailserver.fullname" . }}-postfix:465 send-proxy-v2 check
+      server postfix {{ include "mailserver.fullname" . }}-postfix:465 send-proxy-v2
     frontend submission
       bind :587
       default_backend postfix-submission
     backend postfix-submission
-      server postfix {{ include "mailserver.fullname" . }}-postfix:587 send-proxy-v2 check
+      server postfix {{ include "mailserver.fullname" . }}-postfix:587 send-proxy-v2
     frontend imaps
       bind :993
       default_backend dovecot-imaps
     backend dovecot-imaps
-      server dovecot {{ include "mailserver.fullname" . }}-dovecot:993 send-proxy-v2 check
+      server dovecot {{ include "mailserver.fullname" . }}-dovecot:993 send-proxy-v2
     frontend acme
       bind :80
       default_backend certbot-http
     backend certbot-http
-      server certbot {{ include "mailserver.fullname" . }}-postfix:80 check
+      # Certbot's standalone listener exists only during a challenge. A health
+      # check can still be in its rise period when the CA sends the first
+      # request, so forward immediately and let the connection reflect whether
+      # the listener is currently available.
+      server certbot {{ include "mailserver.fullname" . }}-postfix:80

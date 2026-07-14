@@ -1,3 +1,4 @@
+clusterDomain: cluster.local
 mail:
   hostname: mail.example.com
   # The first entry is Postfix's primary domain; every entry accepts mail and gets a DKIM key.

@@ -31,7 +31,7 @@ spec:
             - { name: LDAP_URI, value: "ldap://{{ $n }}-ldap:389" }
             - { name: LDAP_BASE_DN, value: {{ .Values.ldap.baseDN | quote }} }
             - { name: LDAP_BIND_DN, value: {{ .Values.ldap.bindDN | quote }} }
-            - { name: DOVECOT_HOST, value: "{{ $n }}-dovecot" }
+            - { name: DOVECOT_HOST, value: "{{ $n }}-dovecot.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}" }
             - { name: RSPAMD_HOST, value: "{{ $n }}-rspamd" }
             - { name: TLS_CERT, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/fullchain.pem" }
             - { name: TLS_KEY, value: "/etc/letsencrypt/live/{{ .Values.mail.hostname }}/privkey.pem" }

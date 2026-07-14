@@ -1,7 +1,11 @@
 compatibility_level = 3.6
+# Write through postlogd so daemon diagnostics reach Kubernetes logs.
+maillog_file = /dev/stdout
 myhostname = ${MAIL_HOSTNAME}
 mydomain = ${MAIL_PRIMARY_DOMAIN}
 myorigin = $mydomain
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
 inet_interfaces = all
 inet_protocols = ipv4
 mydestination = localhost
@@ -29,7 +33,7 @@ smtpd_helo_required = yes
 smtpd_delay_reject = yes
 # HAProxy preserves the original client IP for postscreen, DNSBL and logging.
 postscreen_upstream_proxy_protocol = haproxy
-smtpd_recipient_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination,reject_unknown_reverse_client_hostname,reject_non_fqdn_sender,reject_non_fqdn_recipient,reject_unknown_sender_domain,reject_rbl_client zen.spamhaus.org,reject_rbl_client bl.spamcop.net
+smtpd_recipient_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination,reject_non_fqdn_sender,reject_non_fqdn_recipient,reject_unknown_sender_domain
 smtpd_sender_restrictions = reject_non_fqdn_sender,reject_unknown_sender_domain
 smtpd_relay_restrictions = permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination
 smtpd_client_connection_rate_limit = 30
