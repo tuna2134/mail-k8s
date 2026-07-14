@@ -140,8 +140,8 @@ ghcr.io/<owner>/<repository>-ldap
 
 `publish-chart.yaml`は`v*`タグでChartをGitHub Pagesへ公開します。事前にGitHubの
 Settings → Pages → Build and deployment → Sourceを「GitHub Actions」に設定してください。
-組織ポリシーで制限されている場合は、Actionsの`GITHUB_TOKEN`にContents writeと
-Packages writeを許可します。リリース手順は次のとおりです。
+組織ポリシーで制限されている場合は、イメージ公開用`GITHUB_TOKEN`にPackages writeを
+許可します。Pages workflow自体はContents readのみです。リリース手順は次のとおりです。
 
 ```sh
 # Chart.yamlのversionと、values.yamlの4イメージtagを同じ版へ更新する
@@ -162,3 +162,8 @@ Pages workflowはGitHub公式の`pages/static.yml`と同じ単一deploy job・Pa
 書き込み可能な`gh-pages`ブランチは使用しません。実行のたびに全`v*`タグをcheckoutして
 過去を含む`.tgz`と`index.yaml`を再生成します。公開Chart内の4イメージrepositoryは、
 workflowが自動的に同じGitHubリポジトリのGHCRパスへ設定します。
+
+Actions画面の「Deploy Helm repository to Pages」から「Run workflow」を選ぶと、選択した
+ブランチのHEADもタグ済みChart群へ追加して即時デプロイします。未タグ版を手動公開する場合も、
+`Chart.yaml`のversionと4つの`images.*.tag`は一致している必要があります。同じversionが
+既にタグに存在する場合は、手動実行で選択したHEADのChartがそのversionを上書きします。

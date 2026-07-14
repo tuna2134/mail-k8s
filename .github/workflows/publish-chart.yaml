@@ -5,7 +5,7 @@ name: Deploy Helm repository to Pages
 on:
   push:
     tags: ["v*"]
-  # Allows the static Helm repository to be rebuilt from all release tags.
+  # In the Actions UI, select the branch/ref whose current Chart should deploy.
   workflow_dispatch:
 
 # Required by actions/deploy-pages. Chart publishing never writes a branch.
@@ -46,24 +46,25 @@ jobs:
           set -euo pipefail
           helm lint .
           helm template mailserver . --namespace mail > /tmp/mailserver.yaml
+          chart_version=$(helm show chart . | awk '$1 == "version:" { print $2 }')
 
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            chart_version=$(helm show chart . | awk '$1 == "version:" { print $2 }')
             tag_version=${GITHUB_REF_NAME#v}
             if [[ "$chart_version" != "$tag_version" ]]; then
               echo "Chart version ${chart_version} does not match tag ${tag_version}" >&2
               exit 1
             fi
 
-            # Each release Chart must reference image tags built from the same tag.
-            for component in postfix dovecot rspamd ldap; do
-              image_line=$(grep -E "^  ${component}:" values.yaml)
-              if [[ "$image_line" != *"tag: \"${chart_version}\""* ]]; then
-                echo "images.${component}.tag must be ${chart_version}" >&2
-                exit 1
-              fi
-            done
           fi
+
+          # Tag and manual deployments must reference an internally consistent image set.
+          for component in postfix dovecot rspamd ldap; do
+            image_line=$(grep -E "^  ${component}:" values.yaml)
+            if [[ "$image_line" != *"tag: \"${chart_version}\""* ]]; then
+              echo "images.${component}.tag must be ${chart_version}" >&2
+              exit 1
+            fi
+          done
 
       - name: Build static Helm repository
         shell: bash
@@ -76,14 +77,21 @@ jobs:
           owner=${OWNER,,}
           chart_url="https://${owner}.github.io/${REPOSITORY}"
 
+          package_chart() {
+            local source_dir=$1
+
+            # Published Charts default to images produced by this repository.
+            for component in postfix dovecot rspamd ldap; do
+              sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" "$source_dir/values.yaml"
+            done
+
+            helm lint "$source_dir"
+            helm package "$source_dir" --destination public
+          }
+
           # Pages artifacts are immutable per run. Rebuild every historical
           # package from Git tags so no writable gh-pages branch is required.
           mapfile -t release_tags < <(git tag --list 'v*' --sort=v:refname)
-          if (( ${#release_tags[@]} == 0 )); then
-            echo "No v* release tags were found" >&2
-            exit 1
-          fi
-
           for tag in "${release_tags[@]}"; do
             worktree=$(mktemp -d)
             git archive "$tag" | tar -x -C "$worktree"
@@ -102,15 +110,18 @@ jobs:
               continue
             fi
 
-            # Published Charts default to images produced by this repository.
-            for component in postfix dovecot rspamd ldap; do
-              sed -i "s|registry.example.com/plain-${component}|ghcr.io/${owner}/${REPOSITORY}-${component}|" "$worktree/values.yaml"
-            done
-
-            helm lint "$worktree"
-            helm package "$worktree" --destination public
+            package_chart "$worktree"
             rm -rf "$worktree"
           done
+
+          # workflow_dispatch publishes the selected ref's HEAD even when it has
+          # no release tag yet. If the version already exists, HEAD replaces it.
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            current=$(mktemp -d)
+            git archive HEAD | tar -x -C "$current"
+            package_chart "$current"
+            rm -rf "$current"
+          fi
 
           if ! compgen -G 'public/*.tgz' > /dev/null; then
             echo "No valid Helm packages were generated" >&2
@@ -128,4 +139,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-
