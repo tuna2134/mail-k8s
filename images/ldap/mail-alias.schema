@@ -1,0 +1,14 @@
+# Optional addresses that Postfix canonicalizes to the user's primary mail value.
+attributetype ( 1.3.6.1.4.1.4203.666.11.10.3
+  NAME 'mail-alias'
+  DESC 'Alternate email address for a mailbox'
+  EQUALITY caseIgnoreIA5Match
+  SUBSTR caseIgnoreIA5SubstringsMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+
+objectclass ( 1.3.6.1.4.1.4203.666.11.10.4
+  NAME 'mailAliasUser'
+  DESC 'Auxiliary class for mailbox aliases'
+  SUP top
+  AUXILIARY
+  MAY ( mail-alias ) )

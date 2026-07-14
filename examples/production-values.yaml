@@ -1,6 +1,8 @@
 mail:
   hostname: mail.example.com
-  domain: example.com
+  domains:
+    - example.com
+    - example.net
   postmaster: postmaster@example.com
 service:
   type: LoadBalancer

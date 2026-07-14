@@ -2,6 +2,9 @@ enabled = true;
 sign_authenticated = true;
 sign_local = true;
 use_domain = "header";
-use_esld = true;
+# mail.domains contains exact signing domains, including any desired subdomain.
+use_esld = false;
 selector = "mail";
-domain { ${MAIL_DOMAIN} { path = "/var/lib/rspamd/dkim/${MAIL_DOMAIN}.mail.key"; selector = "mail"; } }
+domain {
+${DKIM_DOMAIN_CONFIG}
+}

@@ -1,14 +1,15 @@
 mail:
   hostname: mail.example.com
-  domain: example.com
+  # The first entry is Postfix's primary domain; every entry accepts mail and gets a DKIM key.
+  domains: [example.com]
   postmaster: postmaster@example.com
   messageSizeLimit: 26214400
 images:
   # Project images are public on GHCR. Override these only for a fork or local build.
-  postfix: { repository: ghcr.io/tuna2134/mail-k8s-postfix, tag: "0.3.0", pullPolicy: IfNotPresent }
-  dovecot: { repository: ghcr.io/tuna2134/mail-k8s-dovecot, tag: "0.3.0", pullPolicy: IfNotPresent }
-  rspamd: { repository: ghcr.io/tuna2134/mail-k8s-rspamd, tag: "0.3.0", pullPolicy: IfNotPresent }
-  ldap: { repository: ghcr.io/tuna2134/mail-k8s-ldap, tag: "0.3.0", pullPolicy: IfNotPresent }
+  postfix: { repository: ghcr.io/tuna2134/mail-k8s-postfix, tag: "0.4.0", pullPolicy: IfNotPresent }
+  dovecot: { repository: ghcr.io/tuna2134/mail-k8s-dovecot, tag: "0.4.0", pullPolicy: IfNotPresent }
+  rspamd: { repository: ghcr.io/tuna2134/mail-k8s-rspamd, tag: "0.4.0", pullPolicy: IfNotPresent }
+  ldap: { repository: ghcr.io/tuna2134/mail-k8s-ldap, tag: "0.4.0", pullPolicy: IfNotPresent }
   certbot: { repository: certbot/certbot, tag: "v5.6.0", pullPolicy: IfNotPresent }
   haproxy: { repository: haproxy, tag: "3.2-alpine", pullPolicy: IfNotPresent }
 imagePullSecrets: []

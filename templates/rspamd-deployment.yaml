@@ -13,10 +13,9 @@ spec:
       containers:
         - name: rspamd
           image: "{{ .Values.images.rspamd.repository }}:{{ .Values.images.rspamd.tag }}"
-          env: [{ name: MAIL_DOMAIN, value: {{ .Values.mail.domain | quote }} }]
+          env: [{ name: MAIL_DOMAINS, value: {{ join "," .Values.mail.domains | quote }} }]
           ports: [{ name: milter, containerPort: 11332 }]
           readinessProbe: { tcpSocket: { port: milter }, periodSeconds: 10 }
           resources: {{- toYaml .Values.resources.rspamd | nindent 12 }}
           volumeMounts: [{ name: rspamd, mountPath: /var/lib/rspamd }]
       volumes: [{ name: rspamd, persistentVolumeClaim: { claimName: {{ $n }}-rspamd } }]
-

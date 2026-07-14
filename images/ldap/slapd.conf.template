@@ -4,6 +4,8 @@ include /etc/ldap/schema/nis.schema
 include /etc/ldap/schema/inetorgperson.schema
 # mail-forward is optional and does not alter existing inetOrgPerson entries.
 include /opt/ldap/mail-forward.schema
+# mail remains the primary address; mail-alias contains optional alternate addresses.
+include /opt/ldap/mail-alias.schema
 pidfile /run/slapd/slapd.pid
 argsfile /run/slapd/slapd.args
 modulepath /usr/lib/ldap

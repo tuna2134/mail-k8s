@@ -5,6 +5,7 @@ ldap_version = 3
 base = ou=users,${LDAP_BASE_DN}
 scope = subtree
 auth_bind = yes
-pass_filter = (&(objectClass=inetOrgPerson)(mail=%u))
-user_filter = (&(objectClass=inetOrgPerson)(mail=%u))
-user_attrs = =home=/var/mail/%d/%n,=mail=maildir:~/Maildir,=uid=5000,=gid=5000
+pass_filter = (&(objectClass=inetOrgPerson)(|(mail=%u)(mail-alias=%u)))
+user_filter = (&(objectClass=inetOrgPerson)(|(mail=%u)(mail-alias=%u)))
+# Always use the LDAP entry's stable home, even when login/delivery used an alias.
+user_attrs = homeDirectory=home,=mail=maildir:~/Maildir,=uid=5000,=gid=5000

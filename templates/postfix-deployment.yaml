@@ -25,7 +25,8 @@ spec:
           image: "{{ .Values.images.postfix.repository }}:{{ .Values.images.postfix.tag }}"
           env:
             - { name: MAIL_HOSTNAME, value: {{ .Values.mail.hostname | quote }} }
-            - { name: MAIL_DOMAIN, value: {{ .Values.mail.domain | quote }} }
+            - { name: MAIL_PRIMARY_DOMAIN, value: {{ first .Values.mail.domains | quote }} }
+            - { name: MAIL_DOMAINS, value: {{ join "," .Values.mail.domains | quote }} }
             - { name: MESSAGE_SIZE_LIMIT, value: {{ printf "%.0f" (float64 .Values.mail.messageSizeLimit) | quote }} }
             - { name: LDAP_URI, value: "ldap://{{ $n }}-ldap:389" }
             - { name: LDAP_BASE_DN, value: {{ .Values.ldap.baseDN | quote }} }
